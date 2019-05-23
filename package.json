@@ -5,11 +5,13 @@
   "dependencies": {
     "baseui": "^6.19.0",
     "firebase": "^6.0.2",
-    "firebase-admin": "^7.3.0",
+    "firebase-admin": "^7.4.0",
+    "firebase-functions": "^2.3.1",
     "install": "^0.12.2",
     "npm": "^6.9.0",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
+    "react-router-dom": "^5.0.0",
     "react-scripts": "3.0.1",
     "styletron-engine-atomic": "^1.1.2",
     "styletron-react": "^5.0.1"
