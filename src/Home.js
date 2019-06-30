@@ -37,7 +37,8 @@ class Home extends React.Component {
     startTime: null,
     endTime: null,
     selectedMeetingRoom: null,
-    error: false
+    validateData: false,
+    error: null
   }
 
   componentDidMount() {
@@ -61,18 +62,63 @@ class Home extends React.Component {
 
     this.writeDatabase(this.state.selectedMeetingRoom);
 
-    /*
-    arrayUpdate.forEach((room) => {
-      if (room.ID === this.state.selectedMeetingRoom.ID) {
-        room.isAvailable = false;
-      }
-    })
-    */
-
     this.setState({
       isOpen: !this.state.isOpen
     });
 
+  }
+
+  validateData() {
+    let date, month, year;
+    let timeStart = new Date(this.state.startTime).getTime();
+    let timeCheckArray = [];
+    let timeEnd = new Date(this.state.endTime).getTime();
+    let error = null;
+    let db = fire.firestore();
+    
+    if (timeStart > timeEnd) {
+      console.log("time Start should be less than time end");
+
+      error = "time start should be less than end time"
+    }
+
+    if (this.state.date !== null) {
+      date = this.state.date.getDate();
+      month = this.state.date.getMonth() + 1;
+      year = this.state.date.getFullYear();
+    }
+
+    let addBookingRef = db.collection('Bookings').doc(this.state.selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings');
+    addBookingRef.get().then(snapshot => {
+      snapshot.forEach(doc => {
+        console.log(doc.id, '=>', doc.data());
+
+        timeCheckArray.push(doc.data());
+
+      });
+    }).then(() => {
+      for (var i = 0, length = timeCheckArray.length; i < length; i++) {
+
+        if (((timeStart > timeCheckArray[i].timeStart) && (timeStart < timeCheckArray[i].timeEnd)) || ((timeEnd > timeCheckArray[i].timeStart) && (timeEnd < timeCheckArray[i].timeEnd))) {
+          console.log("this slot has already been booked, kindly select another slot");
+          error = "this slot has already been booked, kindly select another slot";
+        }
+      }
+    }).then(() => {
+      if ((this.state.date !== null) && (this.state.startTime !== null) && (this.state.endTime !== null) && (error === null)) {
+        this.setState({
+          validateData: true,
+          error: error
+        })
+      }
+      else {
+        this.setState({
+          validateData: false,
+          error: error
+        })
+      }
+
+    })
   }
 
   toggle = (meetingRoom) => {
@@ -95,18 +141,15 @@ class Home extends React.Component {
       console.log("time Start should be less than time end");
     }
 
-    let bookingInfo = { dateOfMeeting: new Date(this.state.date), subjectOfMeeting: this.state.value, timeStart: timeStart, timeEnd: timeEnd };
-
     let date = this.state.date.getDate();
     let month = this.state.date.getMonth() + 1;
     let year = this.state.date.getFullYear();
 
-    db.collection('Bookings').doc(selectedMeetingRoom.ID).collection(selectedMeetingRoom.ID + " " + "Bookings").add(bookingInfo);
-    db.collection('Rooms').doc(selectedMeetingRoom.ID).update({ Date: new Date(this.state.date) });
+    let bookingInfo = { dateOfMeeting: new Date(this.state.date), subjectOfMeeting: this.state.value, timeStart: timeStart, timeEnd: timeEnd };
+
+    let addBookingRef = db.collection('Meeting Rooms').doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings');
 
     let bookingCountRef = db.collection('Meeting Rooms').doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings').doc("Booking Count");
-
-    //fire.firestore().collection('Meeting Rooms').doc(selectedMeetingRoom.ID).collection(date+'-'+month+'-'+year+' '+'Bookings').doc("Booking Count").set({bookingCount:1}, {merge: true})
 
     bookingCountRef.get().then((docSnapshot) => {
       if (docSnapshot.exists) {
@@ -129,7 +172,9 @@ class Home extends React.Component {
       }
     });
 
-    db.collection('Meeting Rooms').doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings').add(bookingInfo).then(() => { console.log("added booking successfully"); }).catch(() => { console.log("not added due to issues") });
+    addBookingRef.add(bookingInfo).then(() => { console.log("added booking successfully"); }).catch(() => { console.log("not added due to issues") });
+
+
   }
 
   saveDate = (d) => {
@@ -141,14 +186,6 @@ class Home extends React.Component {
 
     console.log(" i am date function")
 
-  }
-
-  validateData() {
-    if ((this.state.date !== null) && (this.state.startTime !== null) && (this.state.endTime !== null)) {
-      this.setState({
-        error: true
-      })
-    }
   }
 
   setStartTime = (time) => {
@@ -178,7 +215,7 @@ class Home extends React.Component {
         <Modal onClose={() => { this.toggle(null) }} isOpen={this.state.isOpen}>
           <ModalHeader>Book Now</ModalHeader>
           <ModalBody>
-
+            {this.state.error !== null ? this.state.error : null}
             <Container>
               <FormControl label="From">
                 <TimePicker
@@ -215,7 +252,7 @@ class Home extends React.Component {
           </ModalBody>
 
           <ModalFooter>
-            <ModalButton onClick={this.confirmBooking} disabled={!(this.state.error)}>Confirm Booking</ModalButton>
+            <ModalButton onClick={this.confirmBooking} disabled={!(this.state.validateData) && (this.state.error !== null)}>Confirm Booking</ModalButton>
             <ModalButton onClick={() => { this.toggle(null) }}>Cancel</ModalButton>
           </ModalFooter>
         </Modal>
