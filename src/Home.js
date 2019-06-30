@@ -248,5 +248,3 @@ class Home extends React.Component {
 export default Home;
 
 //dont call react hooks from regular js functions - only call from react function components
-
-
