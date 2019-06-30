@@ -36,7 +36,8 @@ class Home extends React.Component {
     date: null,
     startTime: null,
     endTime: null,
-    selectedMeetingRoom: null
+    selectedMeetingRoom: null,
+    error: false
   }
 
   componentDidMount() {
@@ -84,9 +85,15 @@ class Home extends React.Component {
   //Writes data inside database & checks if rooms are available 
   writeDatabase = (selectedMeetingRoom) => {
 
+    let db = fire.firestore();
+
     let timeStart = new Date(this.state.startTime).getTime();
 
     let timeEnd = new Date(this.state.endTime).getTime();
+
+    if (timeStart > timeEnd) {
+      console.log("time Start should be less than time end");
+    }
 
     let bookingInfo = { dateOfMeeting: new Date(this.state.date), subjectOfMeeting: this.state.value, timeStart: timeStart, timeEnd: timeEnd };
 
@@ -94,43 +101,69 @@ class Home extends React.Component {
     let month = this.state.date.getMonth() + 1;
     let year = this.state.date.getFullYear();
 
-    fire.firestore().collection('Bookings').doc(selectedMeetingRoom.ID).collection(selectedMeetingRoom.ID + " " + "Bookings").add(bookingInfo);
-    fire.firestore().collection('Rooms').doc(selectedMeetingRoom.ID).update({ Date: new Date(this.state.date) });
+    db.collection('Bookings').doc(selectedMeetingRoom.ID).collection(selectedMeetingRoom.ID + " " + "Bookings").add(bookingInfo);
+    db.collection('Rooms').doc(selectedMeetingRoom.ID).update({ Date: new Date(this.state.date) });
 
-    var bookingCountRef = fire.firestore().collection('Meeting Rooms').doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings').doc("Booking Count");
+    let bookingCountRef = db.collection('Meeting Rooms').doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings').doc("Booking Count");
 
     //fire.firestore().collection('Meeting Rooms').doc(selectedMeetingRoom.ID).collection(date+'-'+month+'-'+year+' '+'Bookings').doc("Booking Count").set({bookingCount:1}, {merge: true})
 
-    var transaction = fire.firestore().runTransaction(t => {
-      return t.get(bookingCountRef).then(doc => {
-        // Add one more count to the room booking
-        var newCount = doc.data().bookingCount + 1;
-        t.update(bookingCountRef, { bookingCount: newCount });
-      });
-    })
-      .then(result => {
-        console.log('Transaction success!');
-      })
-      .catch(err => {
-        console.log('Transaction failure:', err);
-      });
+    bookingCountRef.get().then((docSnapshot) => {
+      if (docSnapshot.exists) {
+        db.runTransaction(t => {
+          return t.get(bookingCountRef).then(doc => {
+            // Add one more count to the room booking
+            var newCount = doc.data().bookingCount + 1;
+            t.update(bookingCountRef, { bookingCount: newCount });
+          });
+        })
+          .then(result => {
+            console.log('Transaction success!');
+          })
+          .catch(err => {
+            console.log('Transaction failure:', err);
+          });
+      }
+      else {
+        bookingCountRef.set({ bookingCount: 1 });
+      }
+    });
+
+    db.collection('Meeting Rooms').doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings').add(bookingInfo).then(() => { console.log("added booking successfully"); }).catch(() => { console.log("not added due to issues") });
   }
 
   saveDate = (d) => {
     this.setState({
       date: (d.date)
+    }, () => {
+      this.validateData();
     })
+
+    console.log(" i am date function")
+
+  }
+
+  validateData() {
+    if ((this.state.date !== null) && (this.state.startTime !== null) && (this.state.endTime !== null)) {
+      this.setState({
+        error: true
+      })
+    }
   }
 
   setStartTime = (time) => {
     this.setState({
       startTime: time
+    }, () => {
+      this.validateData();
     })
   }
 
   setEndTime = (time) => {
     this.setState({
       endTime: time
+    }, () => {
+      this.validateData()
     })
   }
 
@@ -182,7 +215,7 @@ class Home extends React.Component {
           </ModalBody>
 
           <ModalFooter>
-            <ModalButton onClick={this.confirmBooking}>Confirm Booking</ModalButton>
+            <ModalButton onClick={this.confirmBooking} disabled={!(this.state.error)}>Confirm Booking</ModalButton>
             <ModalButton onClick={() => { this.toggle(null) }}>Cancel</ModalButton>
           </ModalFooter>
         </Modal>
@@ -194,7 +227,6 @@ class Home extends React.Component {
           flexGridRowGap="scale800"
         >
           {this.state.roomsData.map((meetingRoom) => (
-
             <FlexGridItem key={meetingRoom.ID} {...itemProps}>
               <Card
                 overrides={{ Root: { style: { width: '328px' } } }}
