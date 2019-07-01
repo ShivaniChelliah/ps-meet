@@ -52,7 +52,6 @@ class Home extends React.Component {
 
         this.setState({ roomsData: meetingRoomsInfo });
       });
-      console.log('meeting rooms info', meetingRoomsInfo);
     }).catch((err) => {
       console.log('Error getting documents', err);
     });
@@ -69,56 +68,100 @@ class Home extends React.Component {
   }
 
   validateData() {
-    let date, month, year;
-    let timeStart = new Date(this.state.startTime).getTime();
-    let timeCheckArray = [];
-    let timeEnd = new Date(this.state.endTime).getTime();
-    let error = null;
-    let db = fire.firestore();
-    
-    if (timeStart > timeEnd) {
-      console.log("time Start should be less than time end");
+    if ((this.state.date !== null) && (this.state.startTime !== null) && (this.state.endTime !== null)) {
+      //date
+      let date = this.state.date.getDate();
+      let month = this.state.date.getMonth() + 1;
+      let year = this.state.date.getFullYear();
 
-      error = "time start should be less than end time"
-    }
+      //time
+      let timeStart = new Date(this.state.startTime).getTime();
+      let timeCheckArray = [];
+      let timeStartArray = [];
+      let timeEndArray = [];
+      let timeEnd = new Date(this.state.endTime).getTime();
 
-    if (this.state.date !== null) {
-      date = this.state.date.getDate();
-      month = this.state.date.getMonth() + 1;
-      year = this.state.date.getFullYear();
-    }
+      let minTime, maxTime;
 
-    let addBookingRef = db.collection('Bookings').doc(this.state.selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings');
-    addBookingRef.get().then(snapshot => {
-      snapshot.forEach(doc => {
-        console.log(doc.id, '=>', doc.data());
+      let error1 = '';
+      let error2 = '';
 
-        timeCheckArray.push(doc.data());
+      let db = fire.firestore();
+      let addBookingRef = db.collection('Meeting Rooms').doc(this.state.selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings');
 
-      });
-    }).then(() => {
-      for (var i = 0, length = timeCheckArray.length; i < length; i++) {
+      if (timeStart >= timeEnd) {
+        error1 = "Start time should be less than end time."
+      }
 
-        if (((timeStart > timeCheckArray[i].timeStart) && (timeStart < timeCheckArray[i].timeEnd)) || ((timeEnd > timeCheckArray[i].timeStart) && (timeEnd < timeCheckArray[i].timeEnd))) {
-          console.log("this slot has already been booked, kindly select another slot");
-          error = "this slot has already been booked, kindly select another slot";
+      addBookingRef.get().then(snapshot => {
+        snapshot.forEach(doc => {
+          console.log(doc.id, '=>', doc.data());
+          if (doc.id !== 'Booking Count') {
+            timeCheckArray.push(doc.data());
+          }
+
+        });
+      }).then(() => {
+        for (var i = 0, length = timeCheckArray.length; i < length; i++) {
+          if ((timeStart >= timeCheckArray[i].timeStart) && (timeStart <= timeCheckArray[i].timeEnd)) {
+            timeStartArray.push(timeCheckArray[i].timeStart);
+            timeEndArray.push(timeCheckArray[i].timeEnd);
+            error2 = "error";
+          }
+          if ((timeEnd >= timeCheckArray[i].timeStart) && (timeEnd <= timeCheckArray[i].timeEnd)) {
+            timeEndArray.push(timeCheckArray[i].timeEnd);
+            timeStartArray.push(timeCheckArray[i].timeStart);
+            error2 = "error";
+          }
+          if ((timeCheckArray[i].timeStart >= timeStart) && (timeCheckArray[i].timeStart <= timeEnd)) {
+            timeStartArray.push(timeCheckArray[i].timeStart);
+            error2 = "error";
+          }
+          if ((timeCheckArray[i].timeEnd >= timeStart) && (timeCheckArray[i].timeEnd <= timeEnd)) {
+            timeEndArray.push(timeCheckArray[i].timeEnd);
+            error2 = "error";
+          }
         }
-      }
-    }).then(() => {
-      if ((this.state.date !== null) && (this.state.startTime !== null) && (this.state.endTime !== null) && (error === null)) {
-        this.setState({
-          validateData: true,
-          error: error
-        })
-      }
-      else {
-        this.setState({
-          validateData: false,
-          error: error
-        })
-      }
+        console.log(timeStartArray);
+        console.log(timeEndArray);
 
-    })
+        if (error2 === "error") {
+          if ((timeStartArray.length === 0) && (timeEndArray.length !== 0)) {
+            maxTime = Math.max.apply(null, timeEndArray);
+            minTime = Math.min.apply(null, timeEndArray);
+          }
+          else if ((timeStartArray.length !== 0) && (timeEndArray.length === 0)) {
+            minTime = Math.min.apply(null, timeStartArray);
+            maxTime = Math.max.apply(null, timeStartArray);
+          }
+          else if ((timeStartArray.length !== 0) && (timeEndArray.length !== 0)) {
+            minTime = Math.min.apply(null, timeStartArray);
+            maxTime = Math.max.apply(null, timeEndArray);
+          }
+
+          var minTimeGen = new Date(minTime);
+          minTime = (minTimeGen.getHours() + ":" + minTimeGen.getMinutes());
+
+          var maxTimeGen = new Date(maxTime);
+          maxTime = (maxTimeGen.getHours() + ":" + maxTimeGen.getMinutes());
+
+          error2 = `The slot from ${minTime} to ${maxTime} has already been booked. Kindly select another slot`;
+        }
+      }).then(() => {
+        if ((error1 === '') && (error2==='')) {
+          this.setState({
+            validateData: true,
+            error: null
+          })
+        }
+        else {
+          this.setState({
+            validateData: false,
+            error: error1 + " " + error2
+          })
+        }
+      })
+    }
   }
 
   toggle = (meetingRoom) => {
@@ -136,10 +179,6 @@ class Home extends React.Component {
     let timeStart = new Date(this.state.startTime).getTime();
 
     let timeEnd = new Date(this.state.endTime).getTime();
-
-    if (timeStart > timeEnd) {
-      console.log("time Start should be less than time end");
-    }
 
     let date = this.state.date.getDate();
     let month = this.state.date.getMonth() + 1;
@@ -173,8 +212,6 @@ class Home extends React.Component {
     });
 
     addBookingRef.add(bookingInfo).then(() => { console.log("added booking successfully"); }).catch(() => { console.log("not added due to issues") });
-
-
   }
 
   saveDate = (d) => {
@@ -183,9 +220,6 @@ class Home extends React.Component {
     }, () => {
       this.validateData();
     })
-
-    console.log(" i am date function")
-
   }
 
   setStartTime = (time) => {
@@ -215,7 +249,7 @@ class Home extends React.Component {
         <Modal onClose={() => { this.toggle(null) }} isOpen={this.state.isOpen}>
           <ModalHeader>Book Now</ModalHeader>
           <ModalBody>
-            {this.state.error !== null ? this.state.error : null}
+            {this.state.error !== null ? <p className="error">{this.state.error}</p> : null}
             <Container>
               <FormControl label="From">
                 <TimePicker
@@ -252,7 +286,7 @@ class Home extends React.Component {
           </ModalBody>
 
           <ModalFooter>
-            <ModalButton onClick={this.confirmBooking} disabled={!(this.state.validateData) && (this.state.error !== null)}>Confirm Booking</ModalButton>
+            <ModalButton onClick={this.confirmBooking} disabled={!((this.state.validateData) && (this.state.error === null))}>Confirm Booking</ModalButton>
             <ModalButton onClick={() => { this.toggle(null) }}>Cancel</ModalButton>
           </ModalFooter>
         </Modal>
