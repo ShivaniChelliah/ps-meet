@@ -148,7 +148,7 @@ class Home extends React.Component {
           error2 = `The slot from ${minTime} to ${maxTime} has already been booked. Kindly select another slot`;
         }
       }).then(() => {
-        if ((error1 === '') && (error2==='')) {
+        if ((error1 === '') && (error2 === '')) {
           this.setState({
             validateData: true,
             error: null
@@ -188,28 +188,32 @@ class Home extends React.Component {
 
     let addBookingRef = db.collection('Meeting Rooms').doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings');
 
-    let bookingCountRef = db.collection('Meeting Rooms').doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings').doc("Booking Count");
+    let bookingCountRef = db.collection("Booking Count").doc(selectedMeetingRoom.ID).collection("count");
 
-    bookingCountRef.get().then((docSnapshot) => {
-      if (docSnapshot.exists) {
-        db.runTransaction(t => {
-          return t.get(bookingCountRef).then(doc => {
-            // Add one more count to the room booking
-            var newCount = doc.data().bookingCount + 1;
-            t.update(bookingCountRef, { bookingCount: newCount });
-          });
-        })
-          .then(result => {
-            console.log('Transaction success!');
-          })
-          .catch(err => {
-            console.log('Transaction failure:', err);
-          });
-      }
-      else {
-        bookingCountRef.set({ bookingCount: 1 });
-      }
-    });
+    bookingCountRef.get().then((snapshot) => {
+      console.log(snapshot.data());
+    })
+
+    // bookingCountRef.get().then((docSnapshot) => {
+    //   if (docSnapshot.exists) {
+    //     db.runTransaction(t => {
+    //       return t.get(bookingCountRef).then(doc => {
+    //         // Add one more count to the room booking
+    //         var newCount = doc.data().bookingCount + 1;
+    //         t.update(bookingCountRef, { bookingCount: newCount });
+    //       });
+    //     })
+    //       .then(result => {
+    //         console.log('Transaction success!');
+    //       })
+    //       .catch(err => {
+    //         console.log('Transaction failure:', err);
+    //       });
+    //   }
+    //   else {
+    //     bookingCountRef.set({ bookingCount: 1 });
+    //   }
+    // });
 
     addBookingRef.add(bookingInfo).then(() => { console.log("added booking successfully"); }).catch(() => { console.log("not added due to issues") });
   }
@@ -293,7 +297,7 @@ class Home extends React.Component {
 
         <h1>Meeting Rooms</h1>
         <FlexGrid
-          flexGridColumnCount={[1, 2, 2, 2]}
+          flexGridColumnCount={[1, 1, 2, 2]}
           flexGridColumnGap="scale800"
           flexGridRowGap="scale800"
         >
