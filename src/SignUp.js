@@ -1,83 +1,86 @@
-import React, { Component} from 'react'
-import "./index.css"
-import fire from './config/fire'
-import {Redirect} from 'react-router';
-import {Container, Form, Header} from 'semantic-ui-react';
+import React, { Component } from 'react';
+import fire from './config/fire';
+import { Redirect } from 'react-router';
+import { FormControl } from 'baseui/form-control';
+import { styled } from 'baseui';
+import { Input } from 'baseui/input';
+import { Button } from 'baseui/button';
+import { Block } from 'baseui/block';
 
+const Container = styled('div', { width: '700px' });
 
 class CreateAccount extends Component {
     state = {
-        user:{          
-          email:'',
-          password:'',
-          loggedIn:false
-        }, 
+            email: '',
+            password: '',
+            loggedIn: false,
         errors: ''
     }
-    
-   onFormSubmit = (user) => {
 
-    user.preventDefault(); 
-    fire.auth().createUserWithEmailAndPassword(this.state.user.email, this.state.user.password).catch((error)=> {
-        // Handle Errors here.
-        //var errorCode = error.code;
-        var errorMessage = error.message;
-        var errors = '';
-        errors = errorMessage;
-       
-        this.setState({errors: errors});
-        // ...
-      });
-   
-          console.log(this.state.loggedIn);
-      }
-      
+    onFormSubmit = (event) => {
+        console.log(this.state.email);
+        console.log(this.state.password);
+        event.preventDefault();
+        fire.auth().createUserWithEmailAndPassword(this.state.email, this.state.password).catch((error) => {
+            // Handle Errors here
+            var errorMessage = error.message;
+            var errors = '';
+            errors = errorMessage;
 
-    handleChange=(user)=>{
-        
-        const newUser=this.state.user;
-        newUser[user.target.name] =  user.target.value;
-
-        this.setState({
-            newUser: user
-         })
-         
-        console.log(this.state.user);
+            this.setState({ errors: errors });
+            // ...
+        });
     }
 
-render(){
-    const {user} = this.state;
-    if (this.props.log) {   
-        return(
-           <Redirect to={"/users"}  /> 
-        )
-      }
-         else {   
-        return (         
-            <React.Fragment>
-           
-            <Form>
-            <Header as='h2'>Sign Up</Header>
+    setEmail(event) {
+        this.setState({
+            email: event.target.email
+        })
+       // console.log(this.setState(email));
+        console.log(typeof(this.state.email));
+        console.log(this.state.email)
+        console.log(event)
+    }
 
-            {this.state.errors!== ''?<p id='error'>Error: {this.state.errors}</p>:''}
-            
-            <Form.Field>
-            <label htmlFor="email">email</label>
-            <input type="email" name='email' id="email" value={user.email} onChange={this.handleChange}/>
-            </Form.Field>
-            
-            <Form.Field>
-            <label htmlFor="password">password</label>
-            <input type="password" name='password' id="password" value={user.password} onChange={this.handleChange}/>
-            </Form.Field>
-           
-            <button className="ui primary button" onClick={this.onFormSubmit}>Create Account</button>    
-           
-            </Form>
-              
-            </React.Fragment>
-    );}
+    setPassword(event) {
+        this.setState({
+            password: event.target.password
+        })
+        console.log(this.state.password)
+        console.log(event.target)
+        console.log("i am password", typeof(password))
+    }
+
+    render() {
+        if (this.props.log) {
+            return (
+                <Redirect to={"/"} />
+            )
         }
+        else {
+            return (
+                <Container>
+                    <React.Fragment>
+                        <h1>Sign Up</h1>
+                        <Block as="br" />
+
+                        <FormControl label="Email" >
+                            <Input type="email"  onChange={(event) => { this.setEmail(event) }} value={this.state.email} />
+                        </FormControl>
+                        <Block as="br" />
+
+                        <FormControl label="Password">
+                            <Input type="password" onChange={(event) => { this.setPassword(event) }} value={this.state.password} />
+                        </FormControl>
+                        <Block as="br" />
+
+                        <Button onClick={(event)=>{this.onFormSubmit(event)}}>Sign Up</Button>
+
+                    </React.Fragment>
+                </Container>
+            );
+        }
+    }
 
 }
 
