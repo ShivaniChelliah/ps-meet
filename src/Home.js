@@ -1,7 +1,7 @@
 import React from 'react';
 import { FlexGrid, FlexGridItem } from 'baseui/flex-grid';
 import { Card, StyledAction } from 'baseui/card';
-import { Button } from 'baseui/button';
+import { Button, SHAPE } from 'baseui/button';
 import {
   Modal,
   ModalHeader,
@@ -15,6 +15,7 @@ import { styled } from 'baseui';
 import { FormControl } from 'baseui/form-control';
 import fire from './config/fire';
 import { addDays } from 'date-fns/esm';
+
 
 const Container = styled('div', { width: '120px' });
 
@@ -37,10 +38,14 @@ class Home extends React.Component {
     startTime: null,
     endTime: null,
     selectedMeetingRoom: null,
-    error: false
+    validateData: false,
+    error: null,
+    dropdown: true
   }
 
+
   componentDidMount() {
+
     let meetingRoomsInfo = [];  //to store rooms data
     let db = fire.firestore();
 
@@ -51,28 +56,118 @@ class Home extends React.Component {
 
         this.setState({ roomsData: meetingRoomsInfo });
       });
-      console.log('meeting rooms info', meetingRoomsInfo);
     }).catch((err) => {
       console.log('Error getting documents', err);
     });
   }
 
+
+
   confirmBooking = () => {
 
     this.writeDatabase(this.state.selectedMeetingRoom);
-
-    /*
-    arrayUpdate.forEach((room) => {
-      if (room.ID === this.state.selectedMeetingRoom.ID) {
-        room.isAvailable = false;
-      }
-    })
-    */
 
     this.setState({
       isOpen: !this.state.isOpen
     });
 
+  }
+
+  validateData() {
+    if ((this.state.date !== null) && (this.state.startTime !== null) && (this.state.endTime !== null)) {
+      //date
+      let date = this.state.date.getDate();
+      let month = this.state.date.getMonth() + 1;
+      let year = this.state.date.getFullYear();
+
+      //time
+      let timeStart = new Date(this.state.startTime).getTime();
+      let timeCheckArray = [];
+      let timeStartArray = [];
+      let timeEndArray = [];
+      let timeEnd = new Date(this.state.endTime).getTime();
+
+      let minTime, maxTime;
+
+      let error1 = '';
+      let error2 = '';
+
+      let db = fire.firestore();
+      let addBookingRef = db.collection('Meeting Rooms').doc(this.state.selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings');
+
+      if (timeStart >= timeEnd) {
+        error1 = "Start time should be less than end time."
+      }
+
+      addBookingRef.get().then(snapshot => {
+        snapshot.forEach(doc => {
+          console.log(doc.id, '=>', doc.data());
+          if (doc.id !== 'Booking Count') {
+            timeCheckArray.push(doc.data());
+          }
+
+        });
+      }).then(() => {
+        for (var i = 0, length = timeCheckArray.length; i < length; i++) {
+          if ((timeStart >= timeCheckArray[i].timeStart) && (timeStart <= timeCheckArray[i].timeEnd)) {
+            timeStartArray.push(timeCheckArray[i].timeStart);
+            timeEndArray.push(timeCheckArray[i].timeEnd);
+            error2 = "error";
+          }
+          if ((timeEnd >= timeCheckArray[i].timeStart) && (timeEnd <= timeCheckArray[i].timeEnd)) {
+            timeEndArray.push(timeCheckArray[i].timeEnd);
+            timeStartArray.push(timeCheckArray[i].timeStart);
+            error2 = "error";
+          }
+          if ((timeCheckArray[i].timeStart >= timeStart) && (timeCheckArray[i].timeStart <= timeEnd)) {
+            timeStartArray.push(timeCheckArray[i].timeStart);
+            error2 = "error";
+          }
+          if ((timeCheckArray[i].timeEnd >= timeStart) && (timeCheckArray[i].timeEnd <= timeEnd)) {
+            timeEndArray.push(timeCheckArray[i].timeEnd);
+            error2 = "error";
+          }
+        }
+        console.log(timeStartArray);
+        console.log(timeEndArray);
+
+        if (error2 === "error") {
+          if ((timeStartArray.length === 0) && (timeEndArray.length !== 0)) {
+            maxTime = Math.max.apply(null, timeEndArray);
+            minTime = Math.min.apply(null, timeEndArray);
+          }
+          else if ((timeStartArray.length !== 0) && (timeEndArray.length === 0)) {
+            minTime = Math.min.apply(null, timeStartArray);
+            maxTime = Math.max.apply(null, timeStartArray);
+          }
+          else if ((timeStartArray.length !== 0) && (timeEndArray.length !== 0)) {
+            minTime = Math.min.apply(null, timeStartArray);
+            maxTime = Math.max.apply(null, timeEndArray);
+          }
+
+          var minTimeGen = new Date(minTime);
+          minTime = (minTimeGen.getHours() + ":" + minTimeGen.getMinutes());
+
+          var maxTimeGen = new Date(maxTime);
+          maxTime = (maxTimeGen.getHours() + ":" + maxTimeGen.getMinutes());
+
+          error2 = `The slot from ${minTime} to ${maxTime} has already been booked. Kindly select another slot`;
+        }
+      }).then(() => {
+        if ((error1 === '') && (error2 === '')) {
+          this.setState({
+            validateData: true,
+            error: null
+          })
+        }
+        else {
+          this.setState({
+            validateData: false,
+            error: error1 + " " + error2
+          })
+        }
+      })
+    }
   }
 
   toggle = (meetingRoom) => {
@@ -91,45 +186,42 @@ class Home extends React.Component {
 
     let timeEnd = new Date(this.state.endTime).getTime();
 
-    if (timeStart > timeEnd) {
-      console.log("time Start should be less than time end");
-    }
-
-    let bookingInfo = { dateOfMeeting: new Date(this.state.date), subjectOfMeeting: this.state.value, timeStart: timeStart, timeEnd: timeEnd };
-
     let date = this.state.date.getDate();
     let month = this.state.date.getMonth() + 1;
     let year = this.state.date.getFullYear();
 
-    db.collection('Bookings').doc(selectedMeetingRoom.ID).collection(selectedMeetingRoom.ID + " " + "Bookings").add(bookingInfo);
-    db.collection('Rooms').doc(selectedMeetingRoom.ID).update({ Date: new Date(this.state.date) });
+    let bookingInfo = { dateOfMeeting: new Date(this.state.date), subjectOfMeeting: this.state.value, timeStart: timeStart, timeEnd: timeEnd };
 
-    let bookingCountRef = db.collection('Meeting Rooms').doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings').doc("Booking Count");
+    let addBookingRef = db.collection('Meeting Rooms').doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings');
 
-    //fire.firestore().collection('Meeting Rooms').doc(selectedMeetingRoom.ID).collection(date+'-'+month+'-'+year+' '+'Bookings').doc("Booking Count").set({bookingCount:1}, {merge: true})
+    let bookingCountRef = db.collection("Booking Count").doc(selectedMeetingRoom.ID).collection("count");
 
-    bookingCountRef.get().then((docSnapshot) => {
-      if (docSnapshot.exists) {
-        db.runTransaction(t => {
-          return t.get(bookingCountRef).then(doc => {
-            // Add one more count to the room booking
-            var newCount = doc.data().bookingCount + 1;
-            t.update(bookingCountRef, { bookingCount: newCount });
-          });
-        })
-          .then(result => {
-            console.log('Transaction success!');
-          })
-          .catch(err => {
-            console.log('Transaction failure:', err);
-          });
-      }
-      else {
-        bookingCountRef.set({ bookingCount: 1 });
-      }
-    });
+    bookingCountRef.get().then((snapshot) => {
+      console.log(snapshot.data());
+    })
 
-    db.collection('Meeting Rooms').doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings').add(bookingInfo).then(() => { console.log("added booking successfully"); }).catch(() => { console.log("not added due to issues") });
+    // bookingCountRef.get().then((docSnapshot) => {
+    //   if (docSnapshot.exists) {
+    //     db.runTransaction(t => {
+    //       return t.get(bookingCountRef).then(doc => {
+    //         // Add one more count to the room booking
+    //         var newCount = doc.data().bookingCount + 1;
+    //         t.update(bookingCountRef, { bookingCount: newCount });
+    //       });
+    //     })
+    //       .then(result => {
+    //         console.log('Transaction success!');
+    //       })
+    //       .catch(err => {
+    //         console.log('Transaction failure:', err);
+    //       });
+    //   }
+    //   else {
+    //     bookingCountRef.set({ bookingCount: 1 });
+    //   }
+    // });
+
+    addBookingRef.add(bookingInfo).then(() => { console.log("added booking successfully"); }).catch(() => { console.log("not added due to issues") });
   }
 
   saveDate = (d) => {
@@ -138,17 +230,6 @@ class Home extends React.Component {
     }, () => {
       this.validateData();
     })
-
-    console.log(" i am date function")
-
-  }
-
-  validateData() {
-    if ((this.state.date !== null) && (this.state.startTime !== null) && (this.state.endTime !== null)) {
-      this.setState({
-        error: true
-      })
-    }
   }
 
   setStartTime = (time) => {
@@ -172,13 +253,98 @@ class Home extends React.Component {
   }
 
   render() {
+    if (this.props.authUser !== null) {
+      return (
+        <React.Fragment>
+          <div>
+            <Button shape={SHAPE.round}>
+              {this.props.authUser.displayName}
+            </Button>
+          </div>
+          <Modal onClose={() => { this.toggle(null) }} isOpen={this.state.isOpen}>
+            <ModalHeader>Book Now</ModalHeader>
+            <ModalBody>
+              {this.state.error !== null ? <p className="error">{this.state.error}</p> : null}
+              <Container>
+                <FormControl label="From">
+                  <TimePicker
+                    value={this.state.startTime}
+                    onChange={(time) => { this.setStartTime(time) }}
+                    creatable
+                    step={900}
+                  />
+                </FormControl>
+              </Container>
+
+              <Container>
+                <FormControl label="To">
+                  <TimePicker
+                    value={this.state.endTime}
+                    onChange={(time) => { this.setEndTime(time) }}
+                    creatable
+                    step={900}
+                  />
+                </FormControl>
+              </Container>
+
+              <FormControl label="Date">
+                <StatefulDatepicker initialState={{ value: [new Date()] }} minDate={new Date()} maxDate={addDays(new Date(), 7)} onDayClick={(d) => { this.saveDate(d) }} />
+              </FormControl>
+
+              <FormControl label="Subject of Meeting">
+                <Input
+                  onChange={this.onInputChange}
+                  placeholder="Subject of Meeting"
+                  value={this.state.value}
+                />
+              </FormControl>
+            </ModalBody>
+
+            <ModalFooter>
+              <ModalButton onClick={this.confirmBooking} disabled={!((this.state.validateData) && (this.state.error === null))}>Confirm Booking</ModalButton>
+              <ModalButton onClick={() => { this.toggle(null) }}>Cancel</ModalButton>
+            </ModalFooter>
+          </Modal>
+
+          <h1 className='center'>    Meeting Rooms</h1>
+          <FlexGrid
+            flexGridColumnCount={[1, 1, 2, 2]}
+            flexGridColumnGap="scale800"
+            flexGridRowGap="scale800"
+          >
+            {this.state.roomsData.map((meetingRoom) => (
+              <FlexGridItem key={meetingRoom.ID} {...itemProps}>
+                <Card
+                  overrides={{ Root: { style: { width: '328px' } } }}
+                  headerImage={'https://source.unsplash.com/user/erondu/700x400'}
+                  title={meetingRoom.ID}
+                >
+                  <StyledAction>
+                    <Button onClick={() => { this.toggle(meetingRoom) }} style={{ width: '100%' }} >Book Now</Button>
+                  </StyledAction>
+                </Card>
+              </FlexGridItem>
+            ))}
+          </FlexGrid>
+        </React.Fragment>
+
+
+      )
+    }
+
+
     return (
+
       <React.Fragment>
+
+
+
+
 
         <Modal onClose={() => { this.toggle(null) }} isOpen={this.state.isOpen}>
           <ModalHeader>Book Now</ModalHeader>
           <ModalBody>
-
+            {this.state.error !== null ? <p className="error">{this.state.error}</p> : null}
             <Container>
               <FormControl label="From">
                 <TimePicker
@@ -215,14 +381,14 @@ class Home extends React.Component {
           </ModalBody>
 
           <ModalFooter>
-            <ModalButton onClick={this.confirmBooking} disabled={!(this.state.error)}>Confirm Booking</ModalButton>
+            <ModalButton onClick={this.confirmBooking} disabled={!((this.state.validateData) && (this.state.error === null))}>Confirm Booking</ModalButton>
             <ModalButton onClick={() => { this.toggle(null) }}>Cancel</ModalButton>
           </ModalFooter>
         </Modal>
 
-        <h1>Meeting Rooms</h1>
+        <h1 className='center'>    Meeting Rooms</h1>
         <FlexGrid
-          flexGridColumnCount={[1, 2, 2, 2]}
+          flexGridColumnCount={[1, 1, 2, 2]}
           flexGridColumnGap="scale800"
           flexGridRowGap="scale800"
         >
