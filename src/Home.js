@@ -1,7 +1,7 @@
 import React from 'react';
 import { FlexGrid, FlexGridItem } from 'baseui/flex-grid';
 import { Card, StyledAction } from 'baseui/card';
-import { Button } from 'baseui/button';
+import { Button, SHAPE } from 'baseui/button';
 import {
   Modal,
   ModalHeader,
@@ -15,6 +15,7 @@ import { styled } from 'baseui';
 import { FormControl } from 'baseui/form-control';
 import fire from './config/fire';
 import { addDays } from 'date-fns/esm';
+
 
 const Container = styled('div', { width: '120px' });
 
@@ -38,10 +39,13 @@ class Home extends React.Component {
     endTime: null,
     selectedMeetingRoom: null,
     validateData: false,
-    error: null
+    error: null,
+    dropdown: true
   }
 
+
   componentDidMount() {
+
     let meetingRoomsInfo = [];  //to store rooms data
     let db = fire.firestore();
 
@@ -56,6 +60,8 @@ class Home extends React.Component {
       console.log('Error getting documents', err);
     });
   }
+
+
 
   confirmBooking = () => {
 
@@ -247,8 +253,93 @@ class Home extends React.Component {
   }
 
   render() {
+    if (this.props.authUser !== null) {
+      return (
+        <React.Fragment>
+          <div>
+            <Button shape={SHAPE.round}>
+              {this.props.authUser.displayName}
+            </Button>
+          </div>
+          <Modal onClose={() => { this.toggle(null) }} isOpen={this.state.isOpen}>
+            <ModalHeader>Book Now</ModalHeader>
+            <ModalBody>
+              {this.state.error !== null ? <p className="error">{this.state.error}</p> : null}
+              <Container>
+                <FormControl label="From">
+                  <TimePicker
+                    value={this.state.startTime}
+                    onChange={(time) => { this.setStartTime(time) }}
+                    creatable
+                    step={900}
+                  />
+                </FormControl>
+              </Container>
+
+              <Container>
+                <FormControl label="To">
+                  <TimePicker
+                    value={this.state.endTime}
+                    onChange={(time) => { this.setEndTime(time) }}
+                    creatable
+                    step={900}
+                  />
+                </FormControl>
+              </Container>
+
+              <FormControl label="Date">
+                <StatefulDatepicker initialState={{ value: [new Date()] }} minDate={new Date()} maxDate={addDays(new Date(), 7)} onDayClick={(d) => { this.saveDate(d) }} />
+              </FormControl>
+
+              <FormControl label="Subject of Meeting">
+                <Input
+                  onChange={this.onInputChange}
+                  placeholder="Subject of Meeting"
+                  value={this.state.value}
+                />
+              </FormControl>
+            </ModalBody>
+
+            <ModalFooter>
+              <ModalButton onClick={this.confirmBooking} disabled={!((this.state.validateData) && (this.state.error === null))}>Confirm Booking</ModalButton>
+              <ModalButton onClick={() => { this.toggle(null) }}>Cancel</ModalButton>
+            </ModalFooter>
+          </Modal>
+
+          <h1 className='center'>    Meeting Rooms</h1>
+          <FlexGrid
+            flexGridColumnCount={[1, 1, 2, 2]}
+            flexGridColumnGap="scale800"
+            flexGridRowGap="scale800"
+          >
+            {this.state.roomsData.map((meetingRoom) => (
+              <FlexGridItem key={meetingRoom.ID} {...itemProps}>
+                <Card
+                  overrides={{ Root: { style: { width: '328px' } } }}
+                  headerImage={'https://source.unsplash.com/user/erondu/700x400'}
+                  title={meetingRoom.ID}
+                >
+                  <StyledAction>
+                    <Button onClick={() => { this.toggle(meetingRoom) }} style={{ width: '100%' }} >Book Now</Button>
+                  </StyledAction>
+                </Card>
+              </FlexGridItem>
+            ))}
+          </FlexGrid>
+        </React.Fragment>
+
+
+      )
+    }
+
+
     return (
+
       <React.Fragment>
+
+
+
+
 
         <Modal onClose={() => { this.toggle(null) }} isOpen={this.state.isOpen}>
           <ModalHeader>Book Now</ModalHeader>
@@ -295,7 +386,7 @@ class Home extends React.Component {
           </ModalFooter>
         </Modal>
 
-        <h1>Meeting Rooms</h1>
+        <h1 className='center'>    Meeting Rooms</h1>
         <FlexGrid
           flexGridColumnCount={[1, 1, 2, 2]}
           flexGridColumnGap="scale800"

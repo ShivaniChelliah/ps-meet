@@ -1,4 +1,4 @@
-import React, {Component} from 'react';
+import React, { Component } from 'react';
 import './App.css';
 import { BrowserRouter, Switch, Route } from 'react-router-dom'
 import fire from './config/fire'
@@ -12,23 +12,39 @@ class App extends Component {
     authUser: null
   };
 
+
   componentDidMount() {
 
     fire.auth().onAuthStateChanged((authUser) => {
 
       if (authUser) {
-            this.setState({ authUser: authUser })
-          }
-        });
+
+        console.log("dad", authUser);
+        this.setState({ authUser: authUser });
+
+
+      }
+      else {
+        this.setState({ authUser: null });
+      }
+    });
+
+  }
+  signOut() {
+
+    fire.auth().signOut();
 
   }
 
   render() {
+
+
+    console.log(this.state.authUser);
     return (
       <BrowserRouter>
         <div>
           <Switch>
-            <Route exact path='/' component={Home} />
+            <Route exact path='/' render={() => <Home authUser={this.state.authUser} />} />
             <Route exact path='/sign-in' component={SignIn} />
             <Route exact path='/meeting-rooms-stats' component={MeetingRoomStats} />
             <Route exact path="/sign-up" component={CreateAccount} />
