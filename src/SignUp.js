@@ -25,21 +25,17 @@ class CreateAccount extends Component {
   }
 
   onFormSubmit = (event) => {
-    var name = this.state.firstName;
-    console.log(this.state.email);
-    console.log(this.state.password);
-    console.log("dad", this.state.firstName);
     event.preventDefault();
+
     fire.auth().createUserWithEmailAndPassword(this.state.email, this.state.password).catch((error) => {
 
 
     }).then(() => {
       var user = fire.auth().currentUser;
 
-      var displayName = this.state.firstName;
       user.updateProfile({
 
-        displayName: name
+        displayName: this.state.firstName + " " + this.state.lastName
 
       }).catch(function (error) {
 
@@ -49,9 +45,6 @@ class CreateAccount extends Component {
         this.setState({ errors: errors });
       });
 
-
-
-      // ...
     })
   }
 
@@ -59,34 +52,28 @@ class CreateAccount extends Component {
     this.setState({
       email: event.target.value
     })
-    // console.log(this.setState(email));
-    console.log(typeof (this.state.email));
-    console.log(this.state.email)
-    console.log(event)
   }
+
   setFirstName(event) {
     this.setState({
       firstName: event.target.value
     })
-    console.log("123", this.state.firstName);
   }
+
   setLastName(event) {
     this.setState({
       lastName: event.target.value
     })
-    console.log(this.state.lastName);
   }
+
   setPassword(event) {
     this.setState({
       password: event.target.value
     })
-    console.log(this.state.password)
-    console.log(event.target)
-    console.log("i am password", typeof (password))
   }
 
   render() {
-    if (this.props.log) {
+    if (this.props.authUser) {
       return (
         <Redirect to={"/"} />
       )
