@@ -1,7 +1,7 @@
 import React from 'react';
 import { FlexGrid, FlexGridItem } from 'baseui/flex-grid';
 import { Card, StyledAction } from 'baseui/card';
-import { Button, SHAPE } from 'baseui/button';
+import { Button } from 'baseui/button';
 import {
   Modal,
   ModalHeader,
@@ -15,7 +15,7 @@ import { styled } from 'baseui';
 import { FormControl } from 'baseui/form-control';
 import fire from './config/fire';
 import { addDays } from 'date-fns/esm';
-
+import { Redirect } from 'react-router';
 
 const Container = styled('div', { width: '120px' });
 
@@ -40,7 +40,7 @@ class Home extends React.Component {
     selectedMeetingRoom: null,
     validateData: false,
     error: null,
-    dropdown: true
+    bookMeetingRoom: true
   }
 
 
@@ -60,8 +60,6 @@ class Home extends React.Component {
       console.log('Error getting documents', err);
     });
   }
-
-
 
   confirmBooking = () => {
 
@@ -105,7 +103,6 @@ class Home extends React.Component {
           if (doc.id !== 'Booking Count') {
             timeCheckArray.push(doc.data());
           }
-
         });
       }).then(() => {
         for (var i = 0, length = timeCheckArray.length; i < length; i++) {
@@ -128,9 +125,6 @@ class Home extends React.Component {
             error2 = "error";
           }
         }
-        console.log(timeStartArray);
-        console.log(timeEndArray);
-
         if (error2 === "error") {
           if ((timeStartArray.length === 0) && (timeEndArray.length !== 0)) {
             maxTime = Math.max.apply(null, timeEndArray);
@@ -171,10 +165,17 @@ class Home extends React.Component {
   }
 
   toggle = (meetingRoom) => {
-    this.setState({
-      isOpen: !this.state.isOpen,
-      selectedMeetingRoom: meetingRoom
-    })
+    if (this.props.authUser) {
+      this.setState({
+        isOpen: !this.state.isOpen,
+        selectedMeetingRoom: meetingRoom,
+        bookMeetingRoom: true
+      })
+    }
+    else
+      this.setState({
+        bookMeetingRoom: false
+      })
   };
 
   //Writes data inside database & checks if rooms are available 
@@ -192,34 +193,30 @@ class Home extends React.Component {
 
     let bookingInfo = { dateOfMeeting: new Date(this.state.date), subjectOfMeeting: this.state.value, timeStart: timeStart, timeEnd: timeEnd };
 
-    let addBookingRef = db.collection('Meeting Rooms').doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings');
+    let addBookingRef = db.collection("Meeting Rooms").doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings');
 
-    let bookingCountRef = db.collection("Booking Count").doc(selectedMeetingRoom.ID).collection("count");
+    let bookingCountRef = db.collection("Meeting Rooms").doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings').doc("Booking Count");
 
-    bookingCountRef.get().then((snapshot) => {
-      console.log(snapshot.data());
-    })
-
-    // bookingCountRef.get().then((docSnapshot) => {
-    //   if (docSnapshot.exists) {
-    //     db.runTransaction(t => {
-    //       return t.get(bookingCountRef).then(doc => {
-    //         // Add one more count to the room booking
-    //         var newCount = doc.data().bookingCount + 1;
-    //         t.update(bookingCountRef, { bookingCount: newCount });
-    //       });
-    //     })
-    //       .then(result => {
-    //         console.log('Transaction success!');
-    //       })
-    //       .catch(err => {
-    //         console.log('Transaction failure:', err);
-    //       });
-    //   }
-    //   else {
-    //     bookingCountRef.set({ bookingCount: 1 });
-    //   }
-    // });
+    bookingCountRef.get().then((docSnapshot) => {
+      if (docSnapshot.exists) {
+        db.runTransaction(t => {
+          return t.get(bookingCountRef).then(doc => {
+            // Add one more count to the room booking
+            var newCount = doc.data().bookingCount + 1;
+            t.update(bookingCountRef, { bookingCount: newCount });
+          });
+        })
+          .then(result => {
+            console.log('Transaction success!');
+          })
+          .catch(err => {
+            console.log('Transaction failure:', err);
+          });
+      }
+      else {
+        bookingCountRef.set({ bookingCount: 1 });
+      }
+    });
 
     addBookingRef.add(bookingInfo).then(() => { console.log("added booking successfully"); }).catch(() => { console.log("not added due to issues") });
   }
@@ -253,14 +250,9 @@ class Home extends React.Component {
   }
 
   render() {
-    if (this.props.authUser !== null) {
+    if (this.state.bookMeetingRoom) {
       return (
         <React.Fragment>
-          <div>
-            <Button shape={SHAPE.round}>
-              {this.props.authUser.displayName}
-            </Button>
-          </div>
           <Modal onClose={() => { this.toggle(null) }} isOpen={this.state.isOpen}>
             <ModalHeader>Book Now</ModalHeader>
             <ModalBody>
@@ -306,7 +298,7 @@ class Home extends React.Component {
             </ModalFooter>
           </Modal>
 
-          <h1 className='center'>    Meeting Rooms</h1>
+          <h1>Meeting Rooms</h1>
           <FlexGrid
             flexGridColumnCount={[1, 1, 2, 2]}
             flexGridColumnGap="scale800"
@@ -327,89 +319,14 @@ class Home extends React.Component {
             ))}
           </FlexGrid>
         </React.Fragment>
-
-
-      )
+      );
     }
-
-
-    return (
-
-      <React.Fragment>
-
-
-
-
-
-        <Modal onClose={() => { this.toggle(null) }} isOpen={this.state.isOpen}>
-          <ModalHeader>Book Now</ModalHeader>
-          <ModalBody>
-            {this.state.error !== null ? <p className="error">{this.state.error}</p> : null}
-            <Container>
-              <FormControl label="From">
-                <TimePicker
-                  value={this.state.startTime}
-                  onChange={(time) => { this.setStartTime(time) }}
-                  creatable
-                  step={900}
-                />
-              </FormControl>
-            </Container>
-
-            <Container>
-              <FormControl label="To">
-                <TimePicker
-                  value={this.state.endTime}
-                  onChange={(time) => { this.setEndTime(time) }}
-                  creatable
-                  step={900}
-                />
-              </FormControl>
-            </Container>
-
-            <FormControl label="Date">
-              <StatefulDatepicker initialState={{ value: [new Date()] }} minDate={new Date()} maxDate={addDays(new Date(), 7)} onDayClick={(d) => { this.saveDate(d) }} />
-            </FormControl>
-
-            <FormControl label="Subject of Meeting">
-              <Input
-                onChange={this.onInputChange}
-                placeholder="Subject of Meeting"
-                value={this.state.value}
-              />
-            </FormControl>
-          </ModalBody>
-
-          <ModalFooter>
-            <ModalButton onClick={this.confirmBooking} disabled={!((this.state.validateData) && (this.state.error === null))}>Confirm Booking</ModalButton>
-            <ModalButton onClick={() => { this.toggle(null) }}>Cancel</ModalButton>
-          </ModalFooter>
-        </Modal>
-
-        <h1 className='center'>    Meeting Rooms</h1>
-        <FlexGrid
-          flexGridColumnCount={[1, 1, 2, 2]}
-          flexGridColumnGap="scale800"
-          flexGridRowGap="scale800"
-        >
-          {this.state.roomsData.map((meetingRoom) => (
-            <FlexGridItem key={meetingRoom.ID} {...itemProps}>
-              <Card
-                overrides={{ Root: { style: { width: '328px' } } }}
-                headerImage={'https://source.unsplash.com/user/erondu/700x400'}
-                title={meetingRoom.ID}
-              >
-                <StyledAction>
-                  <Button onClick={() => { this.toggle(meetingRoom) }} style={{ width: '100%' }} >Book Now</Button>
-                </StyledAction>
-              </Card>
-            </FlexGridItem>
-          ))}
-        </FlexGrid>
-      </React.Fragment>
-    );
+    else {
+      return <Redirect to='/sign-in' />
+    }
   }
 }
+
 
 export default Home;
 
