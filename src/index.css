@@ -20,7 +20,18 @@ code {
   margin: auto auto
 }
 
+.d3{
+  margin: auto auto
+}
 .center{
   text-align: center
+}
 
+.align-center{
+  text-align: auto auto
+}
+
+#buttonAlign{
+ text-align: right;
+ margin: 15px 15px 15px 15px;
 }
