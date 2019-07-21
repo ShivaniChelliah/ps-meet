@@ -13,76 +13,76 @@ const Container = styled('div', { width: '700px' });
 
 class SignIn extends Component {
 
-    constructor(props) {
-        super();
+  constructor(props) {
+    super();
 
-        this.state = {
-                email: '',
-                password: '',
-             errors: ''
-        }
+    this.state = {
+      email: '',
+      password: '',
+      errors: ''
     }
+  }
 
-    onFormSubmit = (user) => {
-        user.preventDefault();
+  onFormSubmit = (user) => {
+    user.preventDefault();
 
-        fire.auth().signInWithEmailAndPassword(this.state.email, this.state.password).catch((error) => {
-            var errorMessage = error.message;
+    fire.auth().signInWithEmailAndPassword(this.state.email, this.state.password).catch((error) => {
+      var errorMessage = error.message;
 
-            var errors = '';
+      var errors = '';
 
-            errors = errorMessage;
+      errors = errorMessage;
+      console.log("error", error);
+      this.setState({ errors: errors });
+    });
+  }
 
-            this.setState({ errors: errors });
-        });
+  setEmail(event) {
+    this.setState({
+      email: event.target.value
+    })
+  }
+
+  setPassword(event) {
+    this.setState({
+      password: event.target.value
+    })
+  }
+
+  render() {
+    if (this.props.authUser) {
+      return (
+        <Redirect to={"/"} />
+      )
     }
+    else {
+      return (
+        <Container>
+          <React.Fragment>
+            <h1>Sign In</h1>
+            <Block as="br" />
 
-    setEmail(email) {
-        this.setState({
-            email: email
-        })
+            <FormControl label="Email" >
+              <Input onChange={(event) => { this.setEmail(event) }} />
+            </FormControl>
+            <Block as="br" />
+
+            <FormControl label="Password">
+              <Input type="password" onChange={(event) => { this.setPassword(event) }} />
+            </FormControl>
+            <Block as="br" />
+            <Button onClick={(event) => { this.onFormSubmit(event) }}>Sign In</Button>
+
+            <Block font="font450">
+              <Block as="br" />
+              <StyledLink href="/sign-up">New to ps-meet. Sign up to create account</StyledLink>
+            </Block>
+          </React.Fragment>
+        </Container>
+
+      );
     }
-
-    setPassword(password) {
-        this.setState({
-            password: password
-        })
-    }
-
-    render() {
-        if (this.props.log) {
-            return (
-                <Redirect to={"/"} />
-            )
-        }
-        else {
-            return (
-                <Container>
-                    <React.Fragment>
-                        <h1>Sign In</h1>
-                        <Block as="br" />
-
-                        <FormControl label="Email" >
-                            <Input onChange={(email) => { this.setEmail(email) }} />
-                        </FormControl>
-                        <Block as="br" />
-
-                        <FormControl label="Password">
-                            <Input type="password" onChange={(password) => { this.setPassword(password) }} />
-                        </FormControl>
-                        <Block as="br" />
-                        <Button >Sign In</Button>
-
-                        <Block font="font450">
-                        <Block as="br" />
-                            <StyledLink href="/sign-up">New to ps-meet. Sign up to create account</StyledLink>
-                        </Block>
-                    </React.Fragment>
-                </Container>
-
-            );
-        }
-    }
+  }
 }
 
 export default SignIn
