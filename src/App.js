@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import './App.css';
-import { BrowserRouter, Switch, Route } from 'react-router-dom'
+import { BrowserRouter, Switch, Route, Redirect } from 'react-router-dom'
 import fire from './config/fire'
 import Home from './Home';
 import SignIn from './SignIn';
@@ -17,9 +17,12 @@ class App extends Component {
     buttonDisplay: null,
     showMenu: false,
     ITEMS: [
-      { label: 'Sign Out' },
-      { label: 'Item Two' }
-    ]
+      {label: "Home"},
+      { label: 'View Stats' },
+      { label: 'Sign Out' }
+    ],
+    viewStats: false,
+    home: false
   };
 
 
@@ -27,8 +30,6 @@ class App extends Component {
 
     fire.auth().onAuthStateChanged((authUser) => {
       if (authUser) {
-        console.log("dad", authUser);
-
         var str = authUser.displayName;
         if (str !== null) {
           var matches = str.match(/\b(\w)/g); // ['J','S','O','N']
@@ -64,7 +65,7 @@ class App extends Component {
               <StatefulMenu
                 items={this.state.ITEMS}
                 onItemSelect={(event) => close(
-                  event.item.label === "Sign Out" ? this.signOut() : null
+                  event.item.label === "Sign Out" ? this.signOut() : ((event.item.label === "View Stats")?this.setState({viewStats: true, home: false}): this.setState({home: true, viewStats: false}))
                 )}
                 overrides={{ List: { style: { height: '150px', width: '138px' } } }}
               />
@@ -85,6 +86,8 @@ class App extends Component {
             <Route render={() => <h1>Page not found</h1>} />
           </Switch>
         </div>
+        {this.state.viewStats ? <Redirect to='/meeting-rooms-stats' /> : null}
+        {this.state.home ? <Redirect to="/" /> : null}
       </BrowserRouter>
     )
   }
