@@ -4,6 +4,7 @@ import { BrowserRouter, Switch, Route } from 'react-router-dom'
 import fire from './config/fire'
 import Home from './Home';
 import SignIn from './SignIn';
+import Chart from './Chart';
 import MeetingRoomStats from './MeetingRoomStats';
 import CreateAccount from "./SignUp"
 import { Button, SHAPE } from "baseui/button";
@@ -17,8 +18,9 @@ class App extends Component {
     buttonDisplay: null,
     showMenu: false,
     ITEMS: [
-      { label: 'Sign Out' },
-      { label: 'Item Two' }
+      { label: 'Help' },
+      { label: 'Sign Out' }
+
     ]
   };
 
@@ -66,7 +68,7 @@ class App extends Component {
                 onItemSelect={(event) => close(
                   event.item.label === "Sign Out" ? this.signOut() : null
                 )}
-                overrides={{ List: { style: { height: '150px', width: '138px' } } }}
+                overrides={{ List: { style: { height: '78px', width: '138px' } } }}
               />
             )}
           >
@@ -82,6 +84,8 @@ class App extends Component {
             <Route exact path="/sign-in" render={() => <SignIn authUser={this.state.authUser} />} />
             <Route exact path="/meeting-rooms-stats" component={MeetingRoomStats} />
             <Route exact path="/sign-up" render={() => <CreateAccount authUser={this.state.authUser} />} />
+            <Route exact path="/charts" render={() => <Chart authUser={this.state.authUser} />} />
+
             <Route render={() => <h1>Page not found</h1>} />
           </Switch>
         </div>

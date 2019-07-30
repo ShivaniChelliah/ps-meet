@@ -16,6 +16,8 @@ import { FormControl } from 'baseui/form-control';
 import fire from './config/fire';
 import { addDays } from 'date-fns/esm';
 import { Redirect } from 'react-router';
+import { FieldValue } from '@google-cloud/firestore';
+
 
 const Container = styled('div', { width: '120px' });
 
@@ -77,6 +79,8 @@ class Home extends React.Component {
       let date = this.state.date.getDate();
       let month = this.state.date.getMonth() + 1;
       let year = this.state.date.getFullYear();
+      let day = this.state.date.getDay();
+      console.log("day", day);
 
       //time
       let timeStart = new Date(this.state.startTime).getTime();
@@ -180,9 +184,7 @@ class Home extends React.Component {
 
   //Writes data inside database & checks if rooms are available 
   writeDatabase = (selectedMeetingRoom) => {
-
     let db = fire.firestore();
-
     let timeStart = new Date(this.state.startTime).getTime();
 
     let timeEnd = new Date(this.state.endTime).getTime();
@@ -190,22 +192,39 @@ class Home extends React.Component {
     let date = this.state.date.getDate();
     let month = this.state.date.getMonth() + 1;
     let year = this.state.date.getFullYear();
+    const batch = db.batch();
+
 
     let bookingInfo = { dateOfMeeting: new Date(this.state.date), subjectOfMeeting: this.state.value, timeStart: timeStart, timeEnd: timeEnd };
 
     let addBookingRef = db.collection("Meeting Rooms").doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings');
-
-    let bookingCountRef = db.collection("Meeting Rooms").doc(selectedMeetingRoom.ID).collection(date + '-' + month + '-' + year + ' ' + 'Bookings').doc("Booking Count");
+    var day = this.state.date.getDay();
+    let bookingCountRef = db.collection("Meeting Rooms").doc(selectedMeetingRoom.ID).collection("Booking Count").doc("DaysCount");
 
     bookingCountRef.get().then((docSnapshot) => {
       if (docSnapshot.exists) {
         db.runTransaction(t => {
           return t.get(bookingCountRef).then(doc => {
-            // Add one more count to the room booking
-            var newCount = doc.data().bookingCount + 1;
-            t.update(bookingCountRef, { bookingCount: newCount });
+
+            if (day === 0) {
+              var newCount = doc.data().Sunday + 1;
+              t.update(bookingCountRef, { Sunday: newCount });
+            } else if (day === 1) {
+              var newCount = doc.data().Monday + 1;
+              t.update(bookingCountRef, { Monday: newCount });
+            } else if (day === 2) {
+              var newCount = doc.data().Tuesday + 1;
+              t.update(bookingCountRef, { Tuesday: newCount });
+            } else if (day === 3) {
+              var newCount = doc.data().Wednesday + 1;
+              t.update(bookingCountRef, { Wednesday: newCount });
+            } else if (day === 4) {
+              var newCount = doc.data().Wednesday + 1;
+              t.update(bookingCountRef, { Thursday: newCount });
+            }
           });
         })
+
           .then(result => {
             console.log('Transaction success!');
           })
@@ -217,6 +236,7 @@ class Home extends React.Component {
         bookingCountRef.set({ bookingCount: 1 });
       }
     });
+
 
     addBookingRef.add(bookingInfo).then(() => { console.log("added booking successfully"); }).catch(() => { console.log("not added due to issues") });
   }
