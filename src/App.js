@@ -11,6 +11,7 @@ import { Button, SHAPE } from "baseui/button";
 import { StatefulMenu } from 'baseui/menu';
 import ChevronDown from 'baseui/icon/chevron-right';
 import { StatefulPopover, PLACEMENT } from 'baseui/popover';
+import { Redirect } from 'react-router'
 
 class App extends Component {
   state = {
