@@ -12,6 +12,7 @@ import { StatefulMenu } from 'baseui/menu';
 import ChevronDown from 'baseui/icon/chevron-right';
 import { StatefulPopover, PLACEMENT } from 'baseui/popover';
 import { Redirect } from 'react-router'
+import Schedule from './Schedule';
 
 class App extends Component {
   state = {
@@ -86,6 +87,8 @@ class App extends Component {
             <Route exact path="/meeting-rooms-stats" component={MeetingRoomStats} />
             <Route exact path="/sign-up" render={() => <CreateAccount authUser={this.state.authUser} />} />
             <Route exact path="/charts" render={() => <Chart authUser={this.state.authUser} />} />
+            <Route exact path="/schedule" render={() => <Schedule authUser={this.state.authUser} />} />
+
 
             <Route render={() => <h1>Page not found</h1>} />
           </Switch>
